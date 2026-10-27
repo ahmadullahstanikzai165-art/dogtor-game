@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ps" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>د ډاکټر لوبه</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#cfe8f5;font-family:system-ui,sans-serif;touch-action:manipulation;user-select:none;-webkit-user-select:none;color:#0f172a}
+canvas{display:block}
+#stat{position:fixed;left:8px;top:8px;background:#fffe;border-radius:12px;padding:6px 12px;font-weight:700;font-size:14px;line-height:1.6}
+#card{position:fixed;right:8px;top:8px;width:min(58vw,300px);background:#fffe;border-radius:12px;padding:8px 10px;font-size:13px;line-height:1.5;box-shadow:0 2px 8px #0003}
+#pname{font-weight:700;font-size:15px}#comp{color:#334}
+#bar{height:8px;background:#ddd;border-radius:4px;margin:5px 0;overflow:hidden}
+#cb{display:block;height:100%;width:100%;background:#22c55e;transition:width .3s}
+#rec div{font-size:12px}#rec .w{color:#c00;font-weight:700}
+#toast{position:fixed;left:0;right:0;top:46%;text-align:center;font-size:18px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;text-shadow:0 1px 3px #fff,0 0 6px #fff}
+#toast.bad{color:#c00}
+#panel{position:fixed;left:0;right:0;bottom:0;background:#fffe;border-radius:18px 18px 0 0;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 10px #0003}
+#panel:empty{display:none}#panel.b{opacity:.5;pointer-events:none}
+.h{font-weight:700;font-size:14px;text-align:center}
+.r{display:flex;gap:8px;justify-content:center;margin:6px 0}
+.r button{flex:1;min-width:0;max-width:96px;border:0;border-radius:12px;background:#e8f1fb;padding:8px 2px;font-size:24px;color:#0f172a}
+.r button small{display:block;font-size:11px;font-weight:600}
+.r .ok{background:#bbf7d0}
+.go{width:100%;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:16px;padding:11px;font-weight:700}
+.opt{display:block;width:100%;margin:5px 0;padding:11px;border:0;border-radius:12px;background:#e8f1fb;font-size:15px;font-weight:600;color:#0f172a}
+.gray{background:#cbd5e1;color:#0f172a}
+#ov{position:fixed;inset:0;background:#0a2540ee;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;font-size:16px;line-height:1.8}
+#ov h1{margin:0;font-size:28px}#ov button{font-size:18px;padding:12px 32px;border:0;border-radius:14px;background:#22c55e;color:#fff;font-weight:700}
+#fx{position:fixed;inset:0;background:red;opacity:0;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div id="stat">⭐ <b id="sc">0</b><br>❤ <b id="lv">3</b> &nbsp;👥 <b id="cnt">0</b></div>
+<div id="card"><div id="pname"></div><div id="comp"></div><div id="bar"><i id="cb"></i></div><div id="rec"></div></div>
+<div id="toast"></div><div id="fx"></div>
+<div id="panel"></div>
+<div id="ov"><h1>🩺 د ډاکټر لوبه</h1><div>ناروغان درځي.<br>لومړی <b>معاینه</b> (حتی 🩻 X-ray) وکړه، بیا <b>تشخیص</b> ورکړه، بیا <b>درملنه</b> وکړه (کنولا، سیروم، پیچکاري).<br>ځینې ناروغان یوازې آرام ته اړتیا لري!<br><small>دا یوه تعلیمي لوبه ده. د رښتینې ناروغۍ لپاره ډاکټر ته مراجعه وکړئ.</small></div><button id="start">پیل</button></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),rand=a=>a[Math.random()*a.length|0],PI=Math.PI;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xcfe8f5);
+const cam=new THREE.PerspectiveCamera(50,1,0.1,100);
+const rend=new THREE.WebGLRenderer({antialias:true});rend.setPixelRatio(Math.min(devicePixelRatio,2));document.body.prepend(rend.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x8899aa,0.9));
+const dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(5,10,8);scene.add(dl);
+const mat=(c,o)=>new THREE.MeshLambertMaterial(Object.assign({color:c},o||{}));
+function box(w,h,d,c,x,y,z,p,o){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c,o));m.position.set(x,y,z);(p||scene).add(m);return m;}
+function cyl(r,h,c,x,y,z,p,o){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,12),mat(c,o));m.position.set(x,y,z);(p||scene).add(m);return m;}
+
+// ---- room
+box(16,0.2,16,0xdfe9ee,1,-0.1,1);
+const grid=new THREE.GridHelper(16,16,0xb8c8d0,0xb8c8d0);grid.position.set(1,0.01,1);scene.add(grid);
+box(16,5,0.2,0xeaf4f8,1,2.5,-3.3);box(0.2,5,16,0xd8ebf2,-4.8,2.5,1);
+box(2.4,1.8,0.08,0xffffff,2.6,2.9,-3.18);box(2.1,1.5,0.1,0x9bd3f5,2.6,2.9,-3.15);
+box(1.1,1.1,0.06,0xffffff,-1.8,3.1,-3.18);box(0.7,0.2,0.08,0xd62828,-1.8,3.1,-3.14);box(0.2,0.7,0.08,0xd62828,-1.8,3.1,-3.14);
+box(1.5,2.4,0.7,0xf4f7fa,-3.9,1.2,-2.6);[0.7,1.3,1.9].forEach((y,i)=>box(1.2,0.18,0.1,[0x2a9d8f,0xe76f51,0x457b9d][i],-3.9,y,-2.22));
+box(1.1,0.06,0.6,0xcfd8dc,-2.3,0.95,-2.2);box(0.06,0.9,0.06,0x889,-2.3,0.45,-2.2);
+box(0.5,0.05,0.05,0xffffff,-2.5,1.0,-2.2);box(0.15,0.15,0.15,0xd62828,-2.0,1.05,-2.2);box(0.2,0.1,0.3,0x2a6fdb,-2.2,1.03,-2.0);
+[4.6,5.8].forEach(x=>{box(0.9,0.12,0.8,0x2a6fdb,x,0.6,-2.4);box(0.9,0.8,0.1,0x2a6fdb,x,1.0,-2.75);});
+// bed
+box(2.8,0.35,1.7,0x7c8a99,0,0.4,0);box(2.6,0.3,1.5,0xf4f7fa,0,0.725,0);box(0.6,0.14,0.9,0xffffff,-1.0,0.95,0);
+box(0.1,0.9,1.7,0x7c8a99,-1.4,0.8,0);
+const blanket=box(0.9,0.18,1.15,0x7fb7e6,0.55,1.27,0);blanket.visible=false;
+// IV stand
+cyl(0.03,3.2,0x99a,-0.65,1.6,1.4);cyl(0.3,0.05,0x778,-0.65,0.03,1.4);box(0.3,0.05,0.05,0x99a,-0.5,3.15,1.4);
+const bag=new THREE.Group();bag.position.set(-0.35,2.7,1.4);bag.visible=false;scene.add(bag);
+box(0.45,0.65,0.14,0xbfe6ff,0,0,0,bag,{transparent:true,opacity:.4});
+const fluid=new THREE.Group();fluid.position.y=0.275;bag.add(fluid);box(0.38,0.55,0.1,0x4fb8ff,0,-0.275,0,fluid);
+cyl(0.05,0.2,0xeaf7ff,0,-0.5,0,bag,{transparent:true,opacity:.6});
+const drop=new THREE.Mesh(new THREE.SphereGeometry(0.025,8,8),new THREE.MeshBasicMaterial({color:0x2aa0ff}));drop.position.y=-0.5;bag.add(drop);
+
+// ---- humans
+function human(shirt,pants,o={}){
+  const g=new THREE.Group(),skin=o.skin||0xe0b48a;
+  const pv=(x,y,w,h,d,c)=>{const p=new THREE.Group();p.position.set(x,y,0);box(w,h,d,c,0,-h/2,0,p);g.add(p);return p;};
+  g.legL=pv(-0.18,0.8,0.28,0.8,0.3,pants);g.legR=pv(0.18,0.8,0.28,0.8,0.3,pants);
+  box(0.7,0.8,0.4,shirt,0,1.2,0,g);
+  g.armL=pv(-0.5,1.55,0.2,0.75,0.22,shirt);g.armR=pv(0.5,1.55,0.2,0.75,0.22,shirt);
+  const hd=new THREE.Mesh(new THREE.SphereGeometry(0.27,14,12),mat(skin));hd.position.y=1.85;g.add(hd);
+  [-0.09,0.09].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6),new THREE.MeshBasicMaterial({color:0x111111}));e.position.set(x,1.9,0.24);g.add(e);});
+  if(o.hair!==undefined)box(0.5,0.12,0.5,o.hair,0,2.1,0,g);
+  if(o.steth){const t=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.025,6,16),mat(0x222222));t.rotation.x=PI/2;t.position.y=1.58;g.add(t);}
+  return g;}
+function walkAnim(h,t,sp){const s=Math.sin(t*10)*0.7*sp;h.legL.rotation.x=s;h.legR.rotation.x=-s;h.armL.rotation.x=-s;h.armR.rotation.x=s;}
+const doc=human(0xffffff,0x2b3a55,{hair:0x222222,steth:1});doc.position.set(-0.3,0,-1.7);scene.add(doc);
+const docArm=on=>doc.armR.rotation.x=on?-1.4:0;
+const LY={x:0.9,y:1.07,z:0,ry:PI/2,rx:-PI/2},STIN={x:0.9,y:0,z:1.7,ry:-PI/2,rx:0},STOUT={x:0.9,y:0,z:1.7,ry:PI/2,rx:0};
+function newPatient(s){const g=human(rand([0x3a8a5a,0xc27a3a,0x7a5ac2,0xdddddd,0x4a7ac2,0xd4a64a]),rand([0x334455,0x5a4a3a,0x222233]),{hair:rand([0x222222,0x6b3a1a,0x999999]),skin:rand([0xe0b48a,0xc58c5f,0x8d5a3b])});
+  const inner=new THREE.Group(),wrap=new THREE.Group();inner.add(g);wrap.add(inner);wrap.scale.setScalar(s);scene.add(wrap);return {wrap,inner,g,s};}
+function setPose(p,o){p.wrap.position.set(o.x,o.y,o.z);p.wrap.rotation.y=o.ry;p.inner.rotation.x=o.rx;}
+function lerpP(a,b,k){const e=k*k*(3-2*k),o={};['x','y','z','ry','rx'].forEach(s=>o[s]=a[s]+(b[s]-a[s])*e);return o;}
+
+// ---- tweens
+const tasks=[];function go(d,f,done){tasks.push({t:0,d,f,done});}
+function walk(p,x0,x1,z,ry,sp,done){p.wrap.rotation.y=ry;go(Math.abs(x1-x0)/sp,k=>{p.wrap.position.set(x0+(x1-x0)*k,0,z);walkAnim(p.g,T*1.2,1);},()=>{walkAnim(p.g,0,0);done&&done();});}
+
+// ---- tools
+function mkTool(k){const g=new THREE.Group();
+  if(k=='t'){box(0.5,0.05,0.05,0xffffff,0,0,0,g);box(0.07,0.07,0.07,0xe02020,-0.28,0,0,g);}
+  if(k=='s'){cyl(0.13,0.05,0xb0b8c0,0,0,0,g);box(0.03,0.5,0.03,0x222222,0,0.28,0,g);}
+  if(k=='b'){const m=cyl(0.2,0.32,0x2a6fdb,0,0,0,g);m.rotation.z=PI/2;box(0.14,0.14,0.04,0xffffff,0,0.25,0.15,g);}
+  if(k=='l'){cyl(0.04,0.3,0x333333,0,0.1,0,g);const c=new THREE.Mesh(new THREE.ConeGeometry(0.15,0.4,12),new THREE.MeshBasicMaterial({color:0xffee66,transparent:true,opacity:.45}));c.position.y=-0.2;g.add(c);}
+  if(k=='x'){box(0.9,0.04,0.7,0x1a1f2b,0,0,0,g);box(0.8,0.03,0.6,0x8fd3ff,0,0.03,0,g,{transparent:true,opacity:.5});}
+  return g;}
+function mkCan(){const g=new THREE.Group();box(0.3,0.03,0.03,0xcccccc,0,0,0,g);box(0.09,0.03,0.11,0x2a8fff,0.1,0.02,0,g);return g;}
+function mkSy(col){const g=new THREE.Group();cyl(0.05,0.4,0xeeeeee,0,0.25,0,g,{transparent:true,opacity:.6});cyl(0.04,0.3,col,0,0.25,0,g);cyl(0.008,0.1,0xcccccc,0,0.05,0,g);
+  const pl=new THREE.Group();pl.position.y=0.5;g.add(pl);cyl(0.015,0.3,0x888888,0,0,0,pl);cyl(0.06,0.02,0x888888,0,0.16,0,pl);g.plunger=pl;return g;}
+function useTool(tool,pt_,hold,mid,done){
+  const hi=pt_.clone().add(new THREE.Vector3(0,1.2,0.4));tool.position.copy(hi);scene.add(tool);docArm(true);
+  go(0.5,k=>tool.position.lerpVectors(hi,pt_,k),()=>{mid&&mid();go(hold,()=>{},()=>go(0.4,k=>tool.position.lerpVectors(pt_,hi,k),()=>{scene.remove(tool);docArm(false);done&&done();}));});}
+let props=[];
+function link(a,b){const d=b.clone().sub(a),m=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,d.length(),6),new THREE.MeshBasicMaterial({color:0xcfefff}));
+  m.position.copy(a).add(b).multiplyScalar(0.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());scene.add(m);props.push(m);}
+function clearProps(){props.forEach(m=>scene.remove(m));props=[];bag.visible=false;fluid.scale.y=1;}
+
+// ---- cases
+// v: [text, abnormal]
+const CASES=[
+{dx:'د اوبو کمښت (Dehydration)',c:'ډېر اسهال او کانګې لرم، ډېر کمزوری یم.',tx:['cannula','serum'],v:{t:['37.4°C',0],h:['112 / دقیقه – ګړندی',1],lung:['نورمال',0],bp:['90/58 – ټیټ',1],thr:['وچې شونډې او ژبه',1]}},
+{dx:'سینه بغل (Pneumonia)',c:'ټوخی، تبه او د سینې درد لرم.',tx:['abx'],v:{t:['39.1°C – لوړه',1],h:['102 / دقیقه',1],lung:['په سینه کې غږ (crackles)',1],bp:['118/76',0],thr:['لږ سور',0],xr:['د سږو یوه برخه سپینه ښکاري',1]}},
+{dx:'تایفایډ (Typhoid)',c:'څو ورځې دي تبه لرم، ضعف او د خېټې درد.',tx:['cannula','serum','abx'],v:{t:['39.6°C – ډېره لوړه',1],h:['110 / دقیقه – ګړندی',1],lung:['نورمال',0],bp:['92/60 – ټیټ',1],thr:['سپینه ژبه',1]}},
+{dx:'ویروسي تبه',c:'تبه، سردرد او د بدن درد لرم.',tx:['fever'],v:{t:['40.0°C – ډېره لوړه',1],h:['115 / دقیقه',1],lung:['نورمال',0],bp:['115/72',0],thr:['ستونی سور',1]}},
+{dx:'عادي ریزش',c:'پزه مې بنده ده او لږ ټوخی لرم.',tx:[],v:{t:['37.3°C',0],h:['76 / دقیقه',0],lung:['نورمال',0],bp:['120/78',0],thr:['لږ سور',0]}},
+{dx:'الرژیک عکس العمل',c:'ټول بدن مې خارښ کوي او ستونی مې پړسېدلی.',tx:['allergy'],v:{t:['36.9°C',0],h:['108 / دقیقه – ګړندی',1],lung:['ساه تنګي (wheeze)',1],bp:['105/65',0],thr:['ستونی پړسېدلی',1]}},
+{dx:'ملاریا (Malaria)',c:'سخته لړزه او تبه په نوبت راځي، ډېرې خولې کوم.',tx:['malaria'],v:{t:['39.8°C – ډېره لوړه',1],h:['108 / دقیقه',1],lung:['نورمال',0],bp:['105/68',0],thr:['سترګې او پوستکی ژیړ',1]}},
+{dx:'مات هډوکی (Fracture)',c:'له پوړۍ راغورځېدم او لاس مې ډېر درد کوي.',tx:['pain'],v:{t:['36.8°C',0],h:['98 / دقیقه',1],lung:['نورمال',0],bp:['128/82',0],thr:['نورمال',0],xr:['د لاس هډوکی مات دی',1]}},
+{dx:'ټیټ شکر (Hypoglycemia)',c:'لړزه، خولې او ګنګسه لرم، ډوډۍ مې نه ده خوړلې.',tx:['glucose'],v:{t:['36.5°C',0],h:['105 / دقیقه',1],lung:['نورمال',0],bp:['100/65',0],thr:['نورمال',0]}}];
+const INJ={abx:['انټي بیوټیک',0xf59e0b],fever:['د تبې ضد',0x38bdf8],allergy:['د الرژۍ ضد',0xf472b6],pain:['د درد ضد',0xa78bfa],malaria:['د ملاریا ضد',0x34d399],glucose:['ګلوکوز',0xfde047]};
+CASES.forEach(c=>{if(!c.v.xr)c.v.xr=['نورمال',0];});
+const NAMES=['احمد','فاطمه','ګل','محمد','مریم','زرغونه','رحیم','نصیر','سیما','حبیب','شکیلا','عبدالله'];
+const EX={
+ t:{tool:'t',site:[0,2.0,0.3],rec:[['🌡 تبه','t']]},
+ s:{tool:'s',site:[0,1.35,0.3],rec:[['🩺 زړه','h'],['🩺 سینه','lung']]},
+ b:{tool:'b',site:[-0.5,1.35,0.1],rec:[['🩸 فشار','bp']]},
+ l:{tool:'l',site:[0,1.75,0.3],rec:[['🔦 ستونی','thr']]},
+ x:{tool:'x',site:[0,1.2,0.3],rec:[['🩻 X-ray','xr']]}};
+
+// ---- state
+let pt=null,phase='',busy=false,score=0,lives=3,treated=0,last=-1,T=0,running=false;
+const wp=v=>{pt.p.wrap.updateMatrixWorld(true);return pt.p.inner.localToWorld(new THREE.Vector3(v[0],v[1],v[2]));};
+function toast(s,bad){const e=$('toast');e.textContent=s;e.className=bad?'bad':'';e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,2300);}
+function setBusy(b){busy=b;$('panel').classList.toggle('b',b);}
+function penal(msg,amt){pt.cond=Math.max(0,pt.cond-amt);$('fx').style.opacity=.35;setTimeout(()=>$('fx').style.opacity=0,150);toast(msg,true);}
+function hud(){$('sc').textContent=score;$('lv').textContent=lives;$('cnt').textContent=treated;}
+function renderRec(){$('rec').innerHTML=Object.entries(pt?pt.rec:{}).map(([k,v])=>'<div class="'+(v[1]?'w':'')+'">'+k+': '+v[0]+(v[1]?' ⚠':'')+'</div>').join('');}
+const ui=h=>$('panel').innerHTML=h;
+function render(){
+  if(!pt)return ui('');
+  if(phase=='exam')ui('<div class="h">ګام ۱: ناروغ معاینه کړئ</div><div class="r"><button data-a="t">🌡<small>تبه</small></button><button data-a="s">🩺<small>زړه/سینه</small></button><button data-a="b">🩸<small>فشار</small></button><button data-a="l">🔦<small>ستونی</small></button><button data-a="x">🩻<small>X-ray</small></button></div><button class="go" data-a="dx">📋 تشخیص ته ځم</button>');
+  else if(phase=='dx')ui('<div class="h">ګام ۲: ناروغي څه ده؟</div>'+pt.opts.map((o,i)=>'<button class="opt" data-a="pick'+i+'">'+o+'</button>').join('')+'<button class="opt gray" data-a="exam">↩ بیا معاینه</button>');
+  else if(phase=='tx'){const g=k=>pt.given.includes(k)?' class="ok"':'';
+    ui('<div class="h">ګام ۳: درملنه — '+pt.c.dx+'</div><div class="r"><button data-a="cannula"'+g('cannula')+'>🪡<small>کنولا</small></button><button data-a="serum"'+g('serum')+'>💧<small>سیروم</small></button><button data-a="inj">💉<small>پیچکاري</small></button></div><button class="go" data-a="fin">✅ درملنه پای ته ورسوه</button>');}
+  else if(phase=='inj')ui('<div class="h">کومه پیچکاري؟</div>'+Object.entries(INJ).map(([k,v])=>'<button class="opt" data-a="i_'+k+'">💉 '+v[0]+(pt.given.includes(k)?' ✔':'')+'</button>').join('')+'<button class="opt gray" data-a="tx">↩ شاته</button>');
+  else ui('');}
+function verify(k){if(!pt.c.tx.includes(k))penal('دا درملنه دې ناروغ ته نه ده پکار! ناروغ ځورېږي',25);else toast('✔ سمه ده');}
+
+$('panel').onclick=e=>{const b=e.target.closest('button');if(!b||busy||!pt)return;const a=b.dataset.a;
+  if(EX[a])return exam(a);
+  if(a=='dx'||a=='exam'||a=='tx'||a=='inj'){phase=a;if(a=='dx'&&!pt.opts)pt.opts=opts(pt.c);return render();}
+  if(a.startsWith('pick'))return pick(+a.slice(4));
+  if(a=='cannula')return doCannula();if(a=='serum')return doSerum();
+  if(a.startsWith('i_'))return doInj(a.slice(2));
+  if(a=='fin')return finish();};
+function opts(c){return [c.dx].concat(CASES.filter(x=>x!==c).map(x=>x.dx).sort(()=>Math.random()-.5).slice(0,3)).sort(()=>Math.random()-.5);}
+function exam(k){const e=EX[k];setBusy(true);useTool(mkTool(e.tool),wp(e.site),1.0,()=>{e.rec.forEach(([lab,key])=>pt.rec[lab]=pt.c.v[key]);renderRec();},()=>setBusy(false));}
+function pick(i){if(pt.opts[i]==pt.c.dx){phase='tx';toast('✔ تشخیص سم دی');render();}else{pt.wdx++;penal('تشخیص سم نه دی!',10);}}
+function doCannula(){if(pt.given.includes('cannula'))return toast('کنولا مخکې لګول شوې');
+  setBusy(true);const s=[-0.5,1.0,0.14];
+  useTool(mkCan(),wp(s),0.8,()=>{const c=mkCan();c.rotation.z=PI/2;c.position.set(s[0],s[1],s[2]);pt.p.inner.add(c);},()=>{setBusy(false);pt.given.push('cannula');render();verify('cannula');});}
+function doSerum(){if(!pt.given.includes('cannula'))return toast('لومړی کنولا ولګوه!',true);if(pt.given.includes('serum'))return toast('سیروم لګول شوی');
+  setBusy(true);bag.visible=true;fluid.scale.y=1;link(new THREE.Vector3(-0.35,2.05,1.4),wp([-0.5,1.0,0.14]));
+  go(3.6,k=>{fluid.scale.y=1-0.6*k;drop.position.y=-0.52-((T*3)%1)*0.1;},()=>{setBusy(false);pt.given.push('serum');render();verify('serum');});}
+function doInj(k){if(pt.given.includes(k))return toast('دا پیچکاري مخکې شوې');
+  setBusy(true);const sy=mkSy(INJ[k][1]);
+  useTool(sy,wp([-0.5,1.2,0.14]),1.1,()=>go(0.9,p=>sy.plunger.position.y=0.5-0.14*p),()=>{setBusy(false);pt.given.push(k);phase='tx';render();verify(k);});}
+function finish(){const miss=pt.c.tx.filter(x=>!pt.given.includes(x));
+  if(miss.length)return penal('ناروغ لا هم درملنې ته اړتیا لري!',5);
+  const pts=Math.max(20,Math.round(40+pt.cond*0.6-pt.wdx*10));score+=pts;treated++;hud();
+  toast(pt.c.tx.length?'🎉 ناروغ ښه شو! +'+pts:'🎉 ښه! یوازې آرام او اوبو ته اړتیا وه. +'+pts);leave();}
+function fail(){lives--;hud();toast('😟 ناروغ بل ځای ته ولاړ!',true);leave();}
+function leave(){const p=pt.p,L=pt.LY,xf=pt.xf;phase='leave';ui('');blanket.visible=false;
+  go(0.9,k=>setPose(p,lerpP(L,Object.assign({},STOUT,{x:xf}),k)),()=>walk(p,xf,9,1.7,PI/2,2.6,()=>{scene.remove(p.wrap);clearProps();pt=null;$('rec').innerHTML='';
+    if(lives<=0){$('ov').innerHTML='<h1>پای</h1><div>ستاسو نمرې: '+score+'<br>درملنه شوي ناروغان: '+treated+'</div><button id="start">بیا لوبه</button>';$('ov').style.display='flex';$('start').onclick=begin;}
+    else setTimeout(nextPatient,900);}));}
+function nextPatient(){
+  let i;do{i=Math.random()*CASES.length|0;}while(i==last);last=i;
+  const c=CASES[i],kid=Math.random()<0.3,sc=kid?0.6:0.9,p=newPatient(sc),xf=-0.85+1.85*sc,ly=0.875+0.2*sc;
+  pt={c,p,kid,xf,LY:Object.assign({},LY,{x:xf,y:ly}),cond:100,given:[],rec:{},wdx:0,opts:null};phase='walkin';
+  $('pname').textContent=(kid?'🧒 ماشوم ':'👤 ')+rand(NAMES)+' ('+(kid?3+Math.random()*8|0:18+Math.random()*50|0)+' کلن)';$('comp').textContent='« '+c.c+' »';renderRec();ui('');
+  const sin=Object.assign({},STIN,{x:xf});setPose(p,Object.assign({},sin,{x:8}));
+  walk(p,8,xf,1.7,-PI/2,2.6,()=>go(0.9,k=>setPose(p,lerpP(sin,pt.LY,k)),()=>{blanket.scale.set(sc/0.9,1,sc/0.9);blanket.position.set(xf-0.4*sc,ly+0.15*sc+0.065,0);blanket.visible=true;phase='exam';render();toast(kid?'🧒 ماشوم ژر خرابېږي، چټک اوسئ!':'🩺 ناروغ معاینه کړئ');}));}
+function begin(){$('ov').style.display='none';score=0;lives=3;treated=0;last=-1;hud();if(!running){running=true;loop();}nextPatient();}
+$('start').onclick=begin;
+
+function fit(){const a=innerWidth/innerHeight;rend.setSize(innerWidth,innerHeight);cam.aspect=a;cam.updateProjectionMatrix();
+  const d=Math.max(9,7.6/(0.93*a));cam.position.set(0.2+d*0.38,1.2+d*0.5,0.2+d*0.85);cam.lookAt(0.2,a<1?0.5:1.1,0.2);}
+addEventListener('resize',fit);fit();
+
+const clock=new THREE.Clock();
+function loop(){requestAnimationFrame(loop);
+  const dt=Math.min(clock.getDelta(),0.05);T+=dt;
+  tasks.slice().forEach(k=>{k.t+=dt;const p=Math.min(k.t/k.d,1);k.f(p);if(p>=1){tasks.splice(tasks.indexOf(k),1);k.done&&k.done();}});
+  doc.position.y=Math.sin(T*2)*0.01;
+  if(pt){
+    if(phase!='walkin'&&phase!='leave'){
+      if(!busy){pt.cond-=dt*Math.min(0.5+treated*0.03,1.2)*(pt.kid?1.3:1);if(pt.cond<=0){pt.cond=0;fail();}}
+      pt.p.wrap.position.y=pt.LY.y+Math.sin(T*2)*0.008;}
+    const b=$('cb');b.style.width=pt.cond+'%';b.style.background=pt.cond>60?'#22c55e':pt.cond>30?'#f59e0b':'#ef4444';}
+  rend.render(scene,cam);}
+</script>
+</body>
+</html>
